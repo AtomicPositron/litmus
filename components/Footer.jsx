@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './Footer.module.css';
 
@@ -9,32 +9,38 @@ function useTypewriter(text, speed = 38, startDelay = 400) {
     const [displayed, setDisplayed] = useState('');
     const [done, setDone] = useState(false);
     const ref = useRef(null);
-    const observerRef = useRef(null);
     const started = useRef(false);
 
     useEffect(() => {
-        observerRef.current = new IntersectionObserver(
+        const observer = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting && !started.current) {
                     started.current = true;
                     let i = 0;
                     const timeout = setTimeout(() => {
                         const interval = setInterval(() => {
-                            setDisplayed(text.slice(0, i + 1));
                             i++;
+                            setDisplayed(text.slice(0, i));
                             if (i >= text.length) {
                                 clearInterval(interval);
                                 setDone(true);
                             }
                         }, speed);
+                        // store interval id for cleanup
+                        ref._interval = interval;
                     }, startDelay);
-                    return () => clearTimeout(timeout);
+                    ref._timeout = timeout;
                 }
             },
             { threshold: 0.3 }
         );
-        if (ref.current) observerRef.current.observe(ref.current);
-        return () => observerRef.current?.disconnect();
+        const el = ref.current;
+        if (el) observer.observe(el);
+        return () => {
+            observer.disconnect();
+            clearTimeout(ref._timeout);
+            clearInterval(ref._interval);
+        };
     }, [text, speed, startDelay]);
 
     return { displayed, done, ref };
@@ -63,7 +69,8 @@ function useCounter(target, duration = 1800) {
             },
             { threshold: 0.4 }
         );
-        if (ref.current) observer.observe(ref.current);
+        const el = ref.current;
+        if (el) observer.observe(el);
         return () => observer.disconnect();
     }, [target, duration]);
 
@@ -75,9 +82,7 @@ function Stat({ value, suffix = '', label }) {
     const { count, ref } = useCounter(value);
     return (
         <div className={styles.stat} ref={ref}>
-            <span className={styles.statNum}>
-                {count.toLocaleString()}{suffix}
-            </span>
+            <span className={styles.statNum}>{count.toLocaleString()}{suffix}</span>
             <span className={styles.statLabel}>{label}</span>
         </div>
     );
@@ -99,7 +104,6 @@ function RadarCanvas() {
             a: Math.random() * Math.PI * 2,
             size: 1 + Math.random() * 2.5,
             alpha: 0,
-            lit: false,
         }));
 
         function resize() {
@@ -107,7 +111,9 @@ function RadarCanvas() {
             canvas.height = canvas.offsetHeight;
         }
         resize();
-        window.addEventListener('resize', resize);
+
+        const ro = new ResizeObserver(resize);
+        ro.observe(canvas);
 
         function draw() {
             const { width: W, height: H } = canvas;
@@ -125,7 +131,7 @@ function RadarCanvas() {
                 ctx.stroke();
             });
 
-            // Cross hairs
+            // Crosshairs
             ctx.beginPath();
             ctx.moveTo(cx - maxR, cy); ctx.lineTo(cx + maxR, cy);
             ctx.moveTo(cx, cy - maxR); ctx.lineTo(cx, cy + maxR);
@@ -133,11 +139,7 @@ function RadarCanvas() {
             ctx.lineWidth = 0.5;
             ctx.stroke();
 
-            // Sweep
-            const gradient = ctx.createConicalGradient
-                ? null
-                : null;
-            // Manual sweep arc
+            // Sweep wedge
             ctx.save();
             ctx.beginPath();
             ctx.moveTo(cx, cy);
@@ -153,22 +155,19 @@ function RadarCanvas() {
             // Sweep line
             ctx.beginPath();
             ctx.moveTo(cx, cy);
-            ctx.lineTo(
-                cx + Math.cos(angle) * maxR,
-                cy + Math.sin(angle) * maxR
-            );
+            ctx.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR);
             ctx.strokeStyle = 'rgba(200, 245, 66, 0.5)';
             ctx.lineWidth = 1;
             ctx.stroke();
 
-            // Dots — light up when swept
+            // Dots
             dots.forEach((dot) => {
                 const dx = cx + Math.cos(dot.a) * (dot.r / 100) * maxR;
                 const dy = cy + Math.sin(dot.a) * (dot.r / 100) * maxR;
                 const dotAngle = (dot.a + Math.PI * 2) % (Math.PI * 2);
                 const sweepAngle = (angle + Math.PI * 2) % (Math.PI * 2);
                 const diff = (sweepAngle - dotAngle + Math.PI * 2) % (Math.PI * 2);
-                if (diff < 0.12) { dot.alpha = 1; dot.lit = true; }
+                if (diff < 0.12) dot.alpha = 1;
                 if (dot.alpha > 0) {
                     ctx.beginPath();
                     ctx.arc(dx, dy, dot.size, 0, Math.PI * 2);
@@ -185,7 +184,7 @@ function RadarCanvas() {
         draw();
         return () => {
             cancelAnimationFrame(animId);
-            window.removeEventListener('resize', resize);
+            ro.disconnect();
         };
     }, []);
 
@@ -193,34 +192,44 @@ function RadarCanvas() {
 }
 
 // ─── Magnetic link wrapper ──────────────────────────────────────────────────────
+// Fixed: ref goes on the wrapper span, not the Link/a (Next Link doesn't forward refs by default)
 function MagLink({ href, children, className, external }) {
-    const ref = useRef(null);
+    const wrapRef = useRef(null);
+    const frameRef = useRef(null);
 
-    function handleMouseMove(e) {
-        const el = ref.current;
-        if (!el) return;
-        const rect = el.getBoundingClientRect();
-        const dx = e.clientX - (rect.left + rect.width / 2);
-        const dy = e.clientY - (rect.top + rect.height / 2);
-        el.style.transform = `translate(${dx * 0.22}px, ${dy * 0.22}px)`;
-    }
+    const handleMouseMove = useCallback((e) => {
+        if (frameRef.current) return;
+        frameRef.current = requestAnimationFrame(() => {
+            frameRef.current = null;
+            const el = wrapRef.current;
+            if (!el) return;
+            const rect = el.getBoundingClientRect();
+            const dx = e.clientX - (rect.left + rect.width / 2);
+            const dy = e.clientY - (rect.top + rect.height / 2);
+            el.style.transform = `translate(${dx * 0.22}px, ${dy * 0.22}px)`;
+        });
+    }, []);
 
-    function handleMouseLeave() {
-        if (ref.current) ref.current.style.transform = 'translate(0,0)';
-    }
+    const handleMouseLeave = useCallback(() => {
+        if (frameRef.current) {
+            cancelAnimationFrame(frameRef.current);
+            frameRef.current = null;
+        }
+        if (wrapRef.current) wrapRef.current.style.transform = 'translate(0,0)';
+    }, []);
 
-    const Tag = external ? 'a' : Link;
-    const extraProps = external ? { href, target: '_blank', rel: 'noopener noreferrer' } : { href };
+    const inner = external
+        ? <a href={href} className={className} target="_blank" rel="noopener noreferrer">{children}</a>
+        : <Link href={href} className={className}>{children}</Link>;
 
     return (
         <span
+            ref={wrapRef}
             style={{ display: 'inline-block', transition: 'transform 0.35s cubic-bezier(0.22,1,0.36,1)' }}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
         >
-            <Tag ref={ref} className={className} {...extraProps}>
-                {children}
-            </Tag>
+            {inner}
         </span>
     );
 }
@@ -238,13 +247,16 @@ function GlitchLogo() {
     }, []);
 
     return (
-        <span className={`${styles.navLogo} ${glitching ? styles.glitch : ''}`} data-text="litmus">
+        <span
+            className={`${styles.navLogo} ${glitching ? styles.glitch : ''}`}
+            data-text="litmus"
+        >
             litmus
         </span>
     );
 }
 
-// ─── Scrolling grade ticker ─────────────────────────────────────────────────────
+// ─── Grade ticker ───────────────────────────────────────────────────────────────
 const GRADE_STREAM = [
     { id: 'CS-2024-0441', grade: 'A', label: 'Highly original' },
     { id: 'EE-2023-1182', grade: 'C+', label: 'Moderate overlap' },
@@ -268,7 +280,7 @@ function GradeTicker() {
             <div className={styles.gradeTickerTrack}>
                 {[...GRADE_STREAM, ...GRADE_STREAM].map((item, i) => (
                     <div key={i} className={styles.gradeTickerItem}>
-                        <span className={styles.gradeTickerGrade} style={{ color: GRADE_COLOR[item.grade] || '#888' }}>
+                        <span className={styles.gradeTickerGrade} style={{ color: GRADE_COLOR[item.grade] ?? '#888' }}>
                             {item.grade}
                         </span>
                         <span className={styles.gradeTickerDivider}>|</span>
@@ -290,13 +302,12 @@ export default function Footer() {
     return (
         <footer className={styles.footer}>
 
-            {/* ── Grade stream ticker ── */}
             <GradeTicker />
 
             <div className={styles.footerContainer}>
                 <div className={styles.footerTop}>
 
-                    {/* ── Brand column ── */}
+                    {/* Brand column */}
                     <div className={styles.footerBrand}>
                         <GlitchLogo />
                         <p className={styles.footerBrandSub} ref={taglineRef}>
@@ -304,32 +315,25 @@ export default function Footer() {
                             {!done && <span className={styles.cursor}>|</span>}
                         </p>
 
-                        {/* ── Stats row ── */}
                         <div className={styles.statsRow}>
                             <Stat value={12400} suffix="+" label="Ideas scanned" />
                             <Stat value={98} suffix="%" label="Accuracy rate" />
                             <Stat value={340} suffix="ms" label="Avg. scan time" />
                         </div>
 
-                        {/* ── Status badge ── */}
                         <div className={styles.statusBadge}>
                             <span className={styles.statusDot} />
                             <span>All systems operational</span>
                         </div>
                     </div>
 
-                    {/* ── Radar visual ── */}
+                    {/* Radar */}
                     <div className={styles.radarWrap} aria-hidden="true">
-                        <RadarCanvas />
                         <div className={styles.radarLabel}>
-                            <span>scanning</span>
-                            <span className={styles.radarLabelDots}>
-                                <span /><span /><span />
-                            </span>
                         </div>
                     </div>
 
-                    {/* ── Nav columns ── */}
+                    {/* Nav columns */}
                     <div className={styles.footerNav}>
                         <div className={styles.footerCol}>
                             <p className={styles.footerLabel}>Product</p>
@@ -357,7 +361,7 @@ export default function Footer() {
                     </div>
                 </div>
 
-                {/* ── CTA strip ── */}
+                {/* CTA strip */}
                 <div className={styles.ctaStrip}>
                     <div className={styles.ctaStripText}>
                         <span className={styles.ctaStripLabel}>Ready to validate?</span>
@@ -369,19 +373,13 @@ export default function Footer() {
                     </Link>
                 </div>
 
-                {/* ── Bottom bar ── */}
+                {/* Bottom bar */}
                 <div className={styles.footerBottom}>
                     <span className={styles.footerRight}>© 2026 LITMUS — Built for student developers</span>
                     <div className={styles.footerSocials}>
-                        <MagLink href="https://github.com" className={styles.footerSocialLink} external>
-                            GH
-                        </MagLink>
-                        <MagLink href="https://twitter.com" className={styles.footerSocialLink} external>
-                            TW
-                        </MagLink>
-                        <MagLink href="https://linkedin.com" className={styles.footerSocialLink} external>
-                            LN
-                        </MagLink>
+                        <MagLink href="https://github.com" className={styles.footerSocialLink} external>GH</MagLink>
+                        <MagLink href="https://twitter.com" className={styles.footerSocialLink} external>TW</MagLink>
+                        <MagLink href="https://linkedin.com" className={styles.footerSocialLink} external>LN</MagLink>
                     </div>
                 </div>
             </div>

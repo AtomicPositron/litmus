@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import styles from './chat.module.css';
+import useLitmusStore from '../hooks/useLitmusStore';
 
-// ─── Placeholder cycling ────────────────────────────────────────────────────────
-
+// ─── Placeholder cycling ───────────────────────────────────────────────────────
 const PLACEHOLDERS = [
     'A smart attendance system using facial recognition...',
     'Blockchain-based certificate verification for universities...',
@@ -15,8 +15,7 @@ const PLACEHOLDERS = [
     'Peer-to-peer tutoring marketplace with NLP matching...',
 ];
 
-// ─── Thinking animation dots ────────────────────────────────────────────────────
-
+// ─── Thinking dots ─────────────────────────────────────────────────────────────
 function ThinkingDots() {
     return (
         <span className={styles.thinkingDots}>
@@ -32,8 +31,7 @@ function ThinkingDots() {
     );
 }
 
-// ─── Scan log lines ────────────────────────────────────────────────────────────
-
+// ─── Scan log ──────────────────────────────────────────────────────────────────
 const SCAN_LINES = [
     'Tokenising input...',
     'Running keyword extraction...',
@@ -90,7 +88,6 @@ function ScanLog({ active }) {
 }
 
 // ─── Char counter ──────────────────────────────────────────────────────────────
-
 function CharCounter({ count, max }) {
     const pct = count / max;
     const color = pct > 0.9 ? '#ff6b6b' : pct > 0.7 ? '#f5a623' : 'var(--litmus-muted2)';
@@ -102,15 +99,18 @@ function CharCounter({ count, max }) {
 }
 
 // ─── Main Page ─────────────────────────────────────────────────────────────────
-
 const MAX_CHARS = 800;
 
 export default function ChatPage() {
     const [idea, setIdea] = useState('');
     const [scanning, setScanning] = useState(false);
+    const [apiError, setApiError] = useState(null);
     const [placeholder, setPlaceholder] = useState(PLACEHOLDERS[0]);
+
     const router = useRouter();
     const textareaRef = useRef(null);
+    const submitIdea = useLitmusStore((s) => s.submitIdea);
+    const reset = useLitmusStore((s) => s.reset);
 
     // cycle placeholder
     useEffect(() => {
@@ -122,32 +122,45 @@ export default function ChatPage() {
         return () => clearInterval(interval);
     }, []);
 
-    function handleSubmit() {
+    async function handleSubmit() {
         if (!idea.trim() || scanning) return;
+
         setScanning(true);
-        // Store idea, navigate after scan animation
-        if (typeof window !== 'undefined') {
-            localStorage.setItem('litmus_idea', idea.trim());
+        setApiError(null);
+        reset(); // clear any previous result
+
+        // ── derive a rough "title" = first sentence / first 80 chars ──────────
+        const title = idea.split(/[.!?]/)[0].trim().slice(0, 80) || idea.slice(0, 80);
+        const description = idea.trim();
+
+        // ── fire API call in background while scan animation plays ────────────
+        const apiPromise = submitIdea({ title, description });
+
+        // ── wait for animation to finish ──────────────────────────────────────
+        const animDuration = SCAN_LINES.length * 520 + 800;
+        const [apiResult] = await Promise.all([
+            apiPromise,
+            new Promise((r) => setTimeout(r, animDuration)),
+        ]);
+
+        if (!apiResult.ok) {
+            setApiError(apiResult.error);
+            setScanning(false);
+            return;
         }
-        setTimeout(() => {
-            router.push('/analysis');
-        }, SCAN_LINES.length * 520 + 800);
+
+        router.push('/analysis');
     }
 
     function handleKey(e) {
-        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            handleSubmit();
-        }
+        if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSubmit();
     }
 
     const canSubmit = idea.trim().length >= 20 && idea.length <= MAX_CHARS;
 
     return (
         <div className={styles.root}>
-            {/* Background grid */}
             <div className={styles.gridBg} aria-hidden />
-
-            {/* Glow */}
             <div className={styles.glow} aria-hidden />
 
             <main className={styles.main}>
@@ -190,7 +203,9 @@ export default function ChatPage() {
 
                         <div className={styles.inputBottom}>
                             <span className={styles.inputHint}>
-                                {idea.length < 20 ? `${20 - idea.length} more characters to unlock scan` : '⌘ + Enter to submit'}
+                                {idea.length < 20
+                                    ? `${20 - idea.length} more characters to unlock scan`
+                                    : '⌘ + Enter to submit'}
                             </span>
 
                             <motion.button
@@ -200,16 +215,23 @@ export default function ChatPage() {
                                 whileTap={canSubmit && !scanning ? { scale: 0.96 } : {}}
                                 whileHover={canSubmit && !scanning ? { scale: 1.02 } : {}}
                             >
-                                {scanning ? (
-                                    <>Scanning <ThinkingDots /></>
-                                ) : (
-                                    <>Validate idea ↗</>
-                                )}
+                                {scanning ? <>Scanning <ThinkingDots /></> : <>Validate idea ↗</>}
                             </motion.button>
                         </div>
                     </div>
 
                     <ScanLog active={scanning} />
+
+                    {/* API error state */}
+                    {apiError && (
+                        <motion.div
+                            className={styles.errorBanner}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                        >
+                            ⚠ {apiError} — check your connection and try again.
+                        </motion.div>
+                    )}
                 </motion.div>
 
                 {/* Example chips */}

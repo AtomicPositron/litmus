@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, useInView, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import styles from './page.module.css';
 import ElectricBorder from '@/components/ElectricBroder';
 import Nav from '@/components/Navbar';
+import { usePerformanceTier } from '../app/hooks/useperformancetier';
+import Footer from '@/components/Footer';
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 
@@ -86,7 +88,10 @@ function Ticker() {
     >
       <div
         className={styles.tickerTrack}
-        style={{ animationPlayState: hovered ? 'paused' : 'running', animationDuration: hovered ? '10s' : '22s' }}
+        style={{
+          animationPlayState: hovered ? 'paused' : 'running',
+          animationDuration: hovered ? '10s' : '22s',
+        }}
       >
         {[...TICKER_ITEMS, ...TICKER_ITEMS].map((item, i) => (
           <span key={i} className={styles.tickerItem}>
@@ -128,25 +133,40 @@ function Counter({ target, suffix = '', duration = 2000 }) {
   );
 }
 
-// ─── Magnetic Tilt Card ────────────────────────────────────────────────────────
+// ─── Magnetic Tilt Card — throttled on high tier, static on low ───────────────
 
-function MagneticCard({ children, className }) {
+function MagneticCard({ children, className, tier }) {
   const ref = useRef(null);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
+  const frameRef = useRef(null);
 
   const handleMouseMove = useCallback((e) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-    setTilt({ x: y * -8, y: x * 8 });
-  }, []);
+    if (tier === 'low') return;
+    // Throttle to rAF — prevents setState storm on mousemove
+    if (frameRef.current) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+      setTilt({ x: y * -8, y: x * 8 });
+    });
+  }, [tier]);
 
   const handleMouseLeave = useCallback(() => {
+    if (frameRef.current) {
+      cancelAnimationFrame(frameRef.current);
+      frameRef.current = null;
+    }
     setTilt({ x: 0, y: 0 });
     setIsHovered(false);
   }, []);
+
+  if (tier === 'low') {
+    return <div ref={ref} className={className}>{children}</div>;
+  }
 
   return (
     <motion.div
@@ -155,11 +175,7 @@ function MagneticCard({ children, className }) {
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={handleMouseLeave}
-      animate={{
-        rotateX: tilt.x,
-        rotateY: tilt.y,
-        scale: isHovered ? 1.025 : 1,
-      }}
+      animate={{ rotateX: tilt.x, rotateY: tilt.y, scale: isHovered ? 1.025 : 1 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
     >
@@ -170,27 +186,33 @@ function MagneticCard({ children, className }) {
 
 // ─── Cursor Spotlight ──────────────────────────────────────────────────────────
 
-function CursorSpotlight({ children, className }) {
+function CursorSpotlight({ children, className, tier }) {
   const ref = useRef(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const [visible, setVisible] = useState(false);
+  const frameRef = useRef(null);
 
   const handleMouseMove = useCallback((e) => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-  }, []);
+    if (tier === 'low') return;
+    if (frameRef.current) return;
+    frameRef.current = requestAnimationFrame(() => {
+      frameRef.current = null;
+      if (!ref.current) return;
+      const rect = ref.current.getBoundingClientRect();
+      setPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+    });
+  }, [tier]);
 
   return (
     <div
       ref={ref}
       className={className}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setVisible(true)}
+      onMouseEnter={() => tier === 'high' && setVisible(true)}
       onMouseLeave={() => setVisible(false)}
       style={{ position: 'relative', overflow: 'hidden' }}
     >
-      {visible && (
+      {visible && tier === 'high' && (
         <div
           style={{
             position: 'absolute',
@@ -203,7 +225,6 @@ function CursorSpotlight({ children, className }) {
             borderRadius: '50%',
             background: 'radial-gradient(circle, rgba(200,245,66,0.08) 0%, transparent 70%)',
             zIndex: 0,
-            transition: 'opacity 0.2s',
           }}
         />
       )}
@@ -212,9 +233,25 @@ function CursorSpotlight({ children, className }) {
   );
 }
 
-// ─── Char-by-char title reveal ─────────────────────────────────────────────────
+// ─── SplitText — full animation on high tier, simple fade on low ──────────────
 
-function SplitText({ text, className, accent, delay = 0 }) {
+function SplitText({ text, className, accent, delay = 0, tier }) {
+  // Low tier: single fade-in, no per-char nodes
+  if (tier === 'low') {
+    return (
+      <motion.span
+        className={className}
+        aria-label={text}
+        style={{ display: 'block', color: accent ? 'var(--litmus-accent)' : undefined }}
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {text}
+      </motion.span>
+    );
+  }
+
   const words = text.split(' ');
   return (
     <span className={className} aria-label={text} style={{ display: 'block' }}>
@@ -241,14 +278,15 @@ function SplitText({ text, className, accent, delay = 0 }) {
   );
 }
 
-// ─── Floating Orbs ────────────────────────────────────────────────────────────
+// ─── Floating Orbs — skipped entirely on low tier ─────────────────────────────
 
-function FloatingOrbs() {
+function FloatingOrbs({ tier }) {
+  if (tier === 'low') return null;
+
+  // Reduced to 2 orbs on high tier (was 4), no blur filter — use opacity falloff instead
   const orbs = [
-    { size: 320, x: '10%', y: '20%', color: 'rgba(200,245,66,0.04)', duration: 8, delay: 0 },
-    { size: 200, x: '75%', y: '15%', color: 'rgba(167,139,250,0.05)', duration: 11, delay: 2 },
-    { size: 150, x: '60%', y: '65%', color: 'rgba(200,245,66,0.03)', duration: 9, delay: 4 },
-    { size: 100, x: '20%', y: '70%', color: 'rgba(167,139,250,0.04)', duration: 13, delay: 1 },
+    { size: 300, x: '8%', y: '18%', color: 'rgba(200,245,66,0.05)', duration: 8, delay: 0 },
+    { size: 180, x: '72%', y: '12%', color: 'rgba(167,139,250,0.05)', duration: 11, delay: 2 },
   ];
 
   return (
@@ -263,29 +301,22 @@ function FloatingOrbs() {
             width: orb.size,
             height: orb.size,
             borderRadius: '50%',
+            // No filter: blur() — replaced with a CSS radial gradient that fades naturally
             background: `radial-gradient(circle, ${orb.color} 0%, transparent 70%)`,
-            filter: 'blur(40px)',
+            willChange: 'transform',
           }}
-          animate={{
-            y: [0, -30, 0],
-            x: [0, 15, 0],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{
-            duration: orb.duration,
-            delay: orb.delay,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
+          animate={{ y: [0, -24, 0], x: [0, 12, 0] }}
+          transition={{ duration: orb.duration, delay: orb.delay, repeat: Infinity, ease: 'easeInOut' }}
         />
       ))}
     </div>
   );
 }
 
-// ─── Animated scan line ────────────────────────────────────────────────────────
+// ─── Scan line — skipped on low tier ──────────────────────────────────────────
 
-function ScanLine() {
+function ScanLine({ tier }) {
+  if (tier === 'low') return null;
   return (
     <motion.div
       style={{
@@ -303,7 +334,7 @@ function ScanLine() {
   );
 }
 
-// ─── Grade Badge (animated demo) ───────────────────────────────────────────────
+// ─── Grade Badge ───────────────────────────────────────────────────────────────
 
 function GradeBadge({ grade = 'B+', delay = 0 }) {
   return (
@@ -320,7 +351,7 @@ function GradeBadge({ grade = 'B+', delay = 0 }) {
 
 // ─── Hero Preview Card ─────────────────────────────────────────────────────────
 
-function HeroCard() {
+function HeroCard({ tier }) {
   const [progress, setProgress] = useState(0);
   const [done, setDone] = useState(false);
   const [glitch, setGlitch] = useState(false);
@@ -329,12 +360,7 @@ function HeroCard() {
     const timer = setTimeout(() => {
       const interval = setInterval(() => {
         setProgress((p) => {
-          if (p >= 100) {
-            clearInterval(interval);
-            setDone(true);
-            return 100;
-          }
-          // Occasional stutter for realism
+          if (p >= 100) { clearInterval(interval); setDone(true); return 100; }
           const jitter = Math.random() > 0.92 ? 0 : p + 2;
           return jitter || p + 2;
         });
@@ -344,18 +370,22 @@ function HeroCard() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Periodic glitch flash on the card
+  // Only run glitch effect on high-tier devices
   useEffect(() => {
+    if (tier === 'low') return;
     const g = setInterval(() => {
       setGlitch(true);
       setTimeout(() => setGlitch(false), 120);
     }, 5000);
     return () => clearInterval(g);
-  }, []);
+  }, [tier]);
 
   return (
-    <div className={`${styles.heroCard} ${glitch ? styles.heroCardGlitch : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
-      <ScanLine />
+    <div
+      className={`${styles.heroCard} ${glitch ? styles.heroCardGlitch : ''}`}
+      style={{ position: 'relative', overflow: 'hidden' }}
+    >
+      <ScanLine tier={tier} />
       <div className={styles.heroCardBar}>
         <span className={styles.heroCardDot} style={{ background: '#ff5f57' }} />
         <span className={styles.heroCardDot} style={{ background: '#febc2e' }} />
@@ -386,8 +416,7 @@ function HeroCard() {
             animate={{ width: `${progress}%` }}
             transition={{ ease: 'easeOut' }}
           />
-          {/* Glow at tip of progress bar */}
-          {!done && (
+          {!done && tier === 'high' && (
             <motion.div
               style={{
                 position: 'absolute',
@@ -405,7 +434,6 @@ function HeroCard() {
           )}
         </div>
 
-        {/* Live typing count */}
         {!done && (
           <motion.p
             style={{ fontSize: '0.7rem', color: 'var(--litmus-muted2)', fontFamily: 'monospace', margin: 0 }}
@@ -473,28 +501,27 @@ function HeroCard() {
 
 // ─── Fade-in section wrapper ───────────────────────────────────────────────────
 
-function FadeIn({ children, delay = 0, className }) {
+function FadeIn({ children, delay = 0, className, tier }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: '-10% 0px -10% 0px' });
 
+  // Low tier: no scale transform, just opacity + y
   return (
     <motion.div
       ref={ref}
       className={className}
-      initial={{ opacity: 0, y: 40, scale: 0.98 }}
+      initial={{ opacity: 0, y: tier === 'low' ? 16 : 40, scale: tier === 'low' ? 1 : 0.98 }}
       animate={inView ? { opacity: 1, y: 0, scale: 1 } : {}}
-      transition={{
-        duration: 0.8,
-        delay,
-        ease: [0.16, 1, 0.3, 1],
-      }}
+      transition={{ duration: tier === 'low' ? 0.4 : 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
     >
       {children}
     </motion.div>
   );
 }
 
-function ScrollSpotlight({ children, className }) {
+// ─── ScrollSpotlight — y transform removed on low tier ────────────────────────
+
+function ScrollSpotlight({ children, className, tier }) {
   const ref = useRef(null);
 
   const { scrollYProgress } = useScroll({
@@ -506,8 +533,13 @@ function ScrollSpotlight({ children, className }) {
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 0.95]);
   const y = useTransform(scrollYProgress, [0, 0.5, 1], [40, 0, -40]);
 
+  // Low tier: only opacity, no scale/y transform
+  const motionStyle = tier === 'low'
+    ? { opacity }
+    : { opacity, scale, y };
+
   return (
-    <motion.div ref={ref} style={{ opacity, scale, y }} className={className}>
+    <motion.div ref={ref} style={motionStyle} className={className}>
       {children}
     </motion.div>
   );
@@ -546,21 +578,65 @@ function StatsStrip() {
   );
 }
 
+// ─── Step Card ────────────────────────────────────────────────────────────────
+
+function StepCard({ step, index }) {
+  const ref = useRef(null);
+  const inView = useInView(ref, { once: true, margin: '-15% 0px' });
+
+  return (
+    <div ref={ref} className={styles.stepCard}>
+      <motion.span
+        className={styles.stepNum}
+        initial={{ opacity: 0, x: -10 }}
+        animate={inView ? { opacity: 1, x: 0 } : {}}
+        transition={{ duration: 0.5, delay: index * 0.1 }}
+      >
+        {step.num}
+      </motion.span>
+
+      <h3 className={styles.stepTitle}>
+        {step.title}
+        <motion.span
+          className={styles.stepTitleLine}
+          initial={{ scaleX: 0 }}
+          animate={inView ? { scaleX: 1 } : {}}
+          transition={{ duration: 0.5, delay: index * 0.1 + 0.2, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </h3>
+
+      <motion.p
+        className={styles.stepBody}
+        initial={{ opacity: 0 }}
+        animate={inView ? { opacity: 1 } : {}}
+        transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
+      >
+        {step.body}
+      </motion.p>
+
+      <motion.div
+        className={styles.stepCornerDot}
+        initial={{ scale: 0 }}
+        animate={inView ? { scale: 1 } : {}}
+        transition={{ type: 'spring', stiffness: 300, delay: index * 0.1 + 0.1 }}
+      />
+    </div>
+  );
+}
+
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const tier = usePerformanceTier();
+
   const { scrollYProgress } = useScroll();
   const heroOpacity = useTransform(scrollYProgress, [0, 0.1, 0.25], [1, 1, 0]);
-  const heroY = useTransform(scrollYProgress, [0.18, 1], [0, -100]);
-  const heroScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.95]);
-
-  // Scroll progress bar at top of page
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
   return (
     <div className={styles.root}>
 
-      {/* ── Scroll progress bar ── */}
+      {/* Scroll progress bar */}
       <motion.div
         style={{
           scaleX,
@@ -572,19 +648,27 @@ export default function LandingPage() {
           background: 'var(--litmus-accent)',
           transformOrigin: '0%',
           zIndex: 999,
-          boxShadow: '0 0 8px rgba(200,245,66,0.6)',
+          boxShadow: tier === 'high' ? '0 0 8px rgba(200,245,66,0.6)' : 'none',
         }}
       />
-      {/* Nav */}
+
       <Nav />
-      {/* ── Hero ── */}
+
+      {/* Hero */}
       <div style={{ width: '100%', position: 'relative' }} className={styles.hero}>
-        <FloatingOrbs />
-        <motion.section style={{ opacity: heroOpacity, y: heroY }} className={styles.heroScreens}>
+        <FloatingOrbs tier={tier} />
+
+        <motion.section style={{ opacity: heroOpacity }} className={styles.heroScreens}>
           <div className={styles.heroContent}>
             <h1 className={styles.heroTitle}>
-              <SplitText text="Your final-year project idea," delay={0.1} />
-              <SplitText text="scored before you build." accent delay={0.3} className={styles.heroTitleAccent} />
+              <SplitText text="Your final-year project idea," delay={0.1} tier={tier} />
+              <SplitText
+                text="scored before you build."
+                accent
+                delay={0.3}
+                className={styles.heroTitleAccent}
+                tier={tier}
+              />
             </h1>
             <motion.p
               className={styles.heroSub}
@@ -613,23 +697,24 @@ export default function LandingPage() {
               </a>
             </motion.div>
           </div>
+
           <motion.div
             className={styles.heroCardWrap}
             initial={{ opacity: 0, y: 40, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
           >
-            <HeroCard />
+            <HeroCard tier={tier} />
           </motion.div>
         </motion.section>
-
       </div>
 
       <StatsStrip />
       <Ticker />
-      {/* ── How it works ── */}
+
+      {/* How it works */}
       <section className={styles.section} id="how">
-        <FadeIn>
+        <FadeIn tier={tier}>
           <p className={styles.sectionLabel}>HOW IT WORKS</p>
           <h2 className={styles.sectionTitle}>
             From idea to insight <em>in seconds</em>
@@ -641,27 +726,26 @@ export default function LandingPage() {
 
         <div className={styles.stepsGrid}>
           {STEPS.map((step, i) => (
-            <FadeIn key={step.num} delay={i * 0.08}>
+            <FadeIn key={step.num} delay={i * 0.08} tier={tier}>
               <StepCard step={step} index={i} />
             </FadeIn>
           ))}
         </div>
       </section>
 
-      {/* ── Features ── */}
-      <ScrollSpotlight>
+      {/* Features */}
+      <ScrollSpotlight tier={tier}>
         <section className={`${styles.section} ${styles.features}`} id="features">
           <p className={styles.sectionLabel}>FEATURES</p>
           <h2 className={styles.sectionTitle}>Everything you need to start right</h2>
 
           <div className={styles.featuresGrid}>
             {FEATURES.map((f, i) => (
-              <FadeIn key={f.title} delay={i * 0.06}>
-                <MagneticCard className={styles.featureCard}>
+              <FadeIn key={f.title} delay={i * 0.06} tier={tier}>
+                <MagneticCard className={styles.featureCard} tier={tier}>
                   <span className={styles.featureIcon}>{f.icon}</span>
                   <h3 className={styles.featureTitle}>{f.title}</h3>
                   <p className={styles.featureBody}>{f.body}</p>
-                  {/* Shimmer line on hover — pure CSS via the card's ::after */}
                 </MagneticCard>
               </FadeIn>
             ))}
@@ -669,8 +753,8 @@ export default function LandingPage() {
         </section>
       </ScrollSpotlight>
 
-      {/* ── CTA Banner ── */}
-      <FadeIn>
+      {/* CTA Banner */}
+      <FadeIn tier={tier}>
         <ElectricBorder
           color="#98c235"
           speed={0.7}
@@ -679,7 +763,7 @@ export default function LandingPage() {
           style={{ borderRadius: 16, width: '80%' }}
           className={styles.ctaElectric}
         >
-          <CursorSpotlight>
+          <CursorSpotlight tier={tier}>
             <section className={styles.ctaBanner}>
               <p className={styles.ctaBannerEyebrow}>Stop guessing.</p>
               <h2 className={styles.ctaBannerTitle}>Start building.</h2>
@@ -695,53 +779,5 @@ export default function LandingPage() {
       </FadeIn>
     </div>
   );
-}
-
-// ─── Step Card with animated number fill ──────────────────────────────────────
-
-function StepCard({ step, index }) {
-  const ref = useRef(null);
-  const inView = useInView(ref, { once: true, margin: '-15% 0px' });
-
-  return (
-    <div ref={ref} className={styles.stepCard}>
-      {/* Number counts up when card enters view */}
-      <motion.span
-        className={styles.stepNum}
-        initial={{ opacity: 0, x: -10 }}
-        animate={inView ? { opacity: 1, x: 0 } : {}}
-        transition={{ duration: 0.5, delay: index * 0.1 }}
-      >
-        {step.num}
-      </motion.span>
-
-      {/* Animated underline on the title */}
-      <h3 className={styles.stepTitle}>
-        {step.title}
-        <motion.span
-          className={styles.stepTitleLine}
-          initial={{ scaleX: 0 }}
-          animate={inView ? { scaleX: 1 } : {}}
-          transition={{ duration: 0.5, delay: index * 0.1 + 0.2, ease: [0.22, 1, 0.36, 1] }}
-        />
-      </h3>
-
-      <motion.p
-        className={styles.stepBody}
-        initial={{ opacity: 0 }}
-        animate={inView ? { opacity: 1 } : {}}
-        transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
-      >
-        {step.body}
-      </motion.p>
-
-      {/* Corner accent dot */}
-      <motion.div
-        className={styles.stepCornerDot}
-        initial={{ scale: 0 }}
-        animate={inView ? { scale: 1 } : {}}
-        transition={{ type: 'spring', stiffness: 300, delay: index * 0.1 + 0.1 }}
-      />
-    </div>
-  );
+  <Footer />
 }

@@ -13,6 +13,23 @@
     text-align: center;
 }
 
+/* Grade color classes — apply via styles[cls] */
+.grade-a {
+    color: var(--grade-a, #c8f542);
+}
+
+.grade-b {
+    color: var(--grade-b, #a78bfa);
+}
+
+.grade-c {
+    color: var(--grade-c, #febc2e);
+}
+
+.grade-f {
+    color: var(--grade-f, #ff6b6b);
+}
+
 .scoreDetails {
     flex: 1;
 }
@@ -34,6 +51,7 @@
 .barFill {
     height: 100%;
     border-radius: 100px;
+    width: 0%;
     transition: width 1.5s cubic-bezier(0.17, 0.55, 0.55, 1);
 }
 
@@ -41,5 +59,10 @@
     .flexContainer {
         flex-direction: column;
         text-align: center;
+    }
+
+    .largeLetter {
+        font-size: 64px;
+        min-width: unset;
     }
 }

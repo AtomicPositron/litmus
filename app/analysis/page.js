@@ -1,83 +1,14 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from './analysis.module.css';
+import useLitmusStore, { scoreToGrade } from '../hooks/useLitmusStore';
+import ChatPanel from '../Chatpanel/ChatPanel';
 
-
-
-function generateMockData(idea) {
-    return {
-        grade: 'B+',
-        gradeColor: '#c8f542',
-        summary: 'Moderate originality detected. Your concept shows promise but overlaps with several existing projects in the facial recognition attendance space. Differentiating your methodology will strengthen your submission.',
-        scores: [
-            { label: 'Originality score', value: 70, color: '#c8f542' },
-            { label: 'Research uniqueness', value: 64, color: '#a78bfa' },
-            { label: 'Keyword freshness', value: 81, color: '#67e8f9' },
-            { label: 'Implementation novelty', value: 55, color: '#fb923c' },
-        ],
-        flags: [
-            { type: 'warn', text: '5 similar projects found in archive (2021–2023)' },
-            { type: 'warn', text: '11 overlapping keywords detected' },
-            { type: 'info', text: 'Your edge-computing angle is underexplored — lean into it' },
-            { type: 'good', text: 'No binary copy matches found' },
-        ],
-        similar: [
-            { title: 'Smart Attendance via Face Recognition', year: '2022', match: '68%' },
-            { title: 'Automated Lecture Monitoring System', year: '2021', match: '54%' },
-            { title: 'IoT + CV Classroom Analytics', year: '2023', match: '41%' },
-        ],
-        introduction: `This project proposes the development of an AI-driven attendance management system leveraging facial recognition technology for higher education institutions. The system aims to automate the traditionally manual process of student attendance tracking, reducing administrative overhead and improving data accuracy. By deploying lightweight convolutional neural networks optimised for edge inference, the proposed solution operates in real time within constrained computational environments, addressing the scalability concerns prevalent in existing literature.`,
-        methodology: `The system architecture follows a three-tier pipeline: (1) Image Acquisition — frames are captured via standard USB or IP cameras mounted at lecture theatre entry points; (2) Feature Extraction — a MobileNetV3 backbone pre-trained on a curated academic face dataset extracts 128-dimensional embeddings; (3) Identity Matching — cosine similarity against a registered student database with a configurable confidence threshold triggers attendance logging. Ground truth validation will be conducted using a dataset of 2,400 student images across 12 departments.`,
-        keywords: [
-            'edge inference', 'MobileNetV3', 'cosine similarity', 'attendance automation',
-            'convolutional neural network', 'real-time recognition', 'lecture analytics',
-            'privacy-preserving biometrics', 'embedded deployment',
-        ],
-        starterCode: `// attendance-system/src/recognition/pipeline.js
-
-import * as faceapi from 'face-api.js';
-
-const CONFIDENCE_THRESHOLD = 0.62;
-
-/**
- * Loads face-api models from the /models directory.
- * Call this once on app init.
- */
-export async function loadModels() {
-  await Promise.all([
-    faceapi.nets.tinyFaceDetector.loadFromUri('/models'),
-    faceapi.nets.faceLandmark68Net.loadFromUri('/models'),
-    faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-  ]);
-  console.log('[Litmus] Face models loaded ✓');
-}
-
-/**
- * Runs face detection + recognition on a video frame.
- * @param {HTMLVideoElement} videoEl  Live camera feed
- * @param {LabeledFaceDescriptors[]} knownFaces  Registered students
- * @returns {{ label: string, distance: number }[]}
- */
-export async function detectAndMatch(videoEl, knownFaces) {
-  const detections = await faceapi
-    .detectAllFaces(videoEl, new faceapi.TinyFaceDetectorOptions())
-    .withFaceLandmarks()
-    .withFaceDescriptors();
-
-  const matcher = new faceapi.FaceMatcher(knownFaces, CONFIDENCE_THRESHOLD);
-
-  return detections.map((d) => {
-    const match = matcher.findBestMatch(d.descriptor);
-    return { label: match.label, distance: match.distance };
-  });
-}`,
-    };
-}
-
-
+// ─── Score bar ─────────────────────────────────────────────────────────────────
 function ScoreBar({ label, value, color, delay }) {
     const ref = useRef(null);
     const inView = useInView(ref, { once: true });
@@ -86,7 +17,7 @@ function ScoreBar({ label, value, color, delay }) {
         <div className={styles.scoreRow} ref={ref}>
             <div className={styles.scoreTop}>
                 <span className={styles.scoreLabel}>{label}</span>
-                <span className={styles.scoreValue} style={{ color }}>{value}%</span>
+                <span className={styles.scoreValue} style={{ color }}>{Math.round(value)}%</span>
             </div>
             <div className={styles.scoreTrack}>
                 <motion.div
@@ -102,28 +33,23 @@ function ScoreBar({ label, value, color, delay }) {
 }
 
 // ─── Flag item ─────────────────────────────────────────────────────────────────
-
 const FLAG_STYLES = {
-    warn: { bg: 'rgba(251, 146, 60, 0.08)', border: 'rgba(251, 146, 60, 0.2)', icon: '⚠', color: '#fb923c' },
-    info: { bg: 'rgba(103, 232, 249, 0.06)', border: 'rgba(103, 232, 249, 0.15)', icon: '●', color: '#67e8f9' },
-    good: { bg: 'rgba(200, 245, 66, 0.06)', border: 'rgba(200, 245, 66, 0.15)', icon: '✓', color: '#c8f542' },
+    warn: { bg: 'rgba(251,146,60,0.08)', border: 'rgba(251,146,60,0.2)', icon: '⚠', color: '#fb923c' },
+    info: { bg: 'rgba(103,232,249,0.06)', border: 'rgba(103,232,249,0.15)', icon: '●', color: '#67e8f9' },
+    good: { bg: 'rgba(200,245,66,0.06)', border: 'rgba(200,245,66,0.15)', icon: '✓', color: '#c8f542' },
 };
 
 function Flag({ type, text }) {
     const s = FLAG_STYLES[type];
     return (
-        <div
-            className={styles.flag}
-            style={{ background: s.bg, border: `1px solid ${s.border}` }}
-        >
+        <div className={styles.flag} style={{ background: s.bg, border: `1px solid ${s.border}` }}>
             <span style={{ color: s.color, fontSize: '0.8rem' }}>{s.icon}</span>
             <span className={styles.flagText}>{text}</span>
         </div>
     );
 }
 
-// ─── Section Card ──────────────────────────────────────────────────────────────
-
+// ─── Section card ──────────────────────────────────────────────────────────────
 function SectionCard({ title, tag, children, delay = 0 }) {
     const ref = useRef(null);
     const inView = useInView(ref, { once: true, margin: '-60px' });
@@ -145,44 +71,105 @@ function SectionCard({ title, tag, children, delay = 0 }) {
     );
 }
 
+// ─── Build flags from real API result ─────────────────────────────────────────
+function buildFlags(result) {
+    const flags = [];
 
-export default function AnalysisPage() {
-    const [data, setData] = useState(null);
-    const [idea, setIdea] = useState('');
-    const [copied, setCopied] = useState(false);
+    const matchCount = result.closest_matches?.length ?? 0;
+    const tagCount = result.matched_tags?.length ?? 0;
 
-    useEffect(() => {
-        const stored = typeof window !== 'undefined'
-            ? localStorage.getItem('litmus_idea') || 'AI-powered attendance system using facial recognition for university lectures.'
-            : 'AI-powered attendance system using facial recognition.';
-        setIdea(stored);
-        setData(generateMockData(stored));
-    }, []);
-
-    function copyCode() {
-        if (!data) return;
-        navigator.clipboard.writeText(data.starterCode);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    if (matchCount > 0) {
+        flags.push({ type: 'warn', text: `${matchCount} similar project${matchCount > 1 ? 's' : ''} found in archive` });
+    }
+    if (tagCount > 0) {
+        flags.push({ type: 'warn', text: `${tagCount} overlapping keyword${tagCount > 1 ? 's' : ''} detected` });
+    }
+    if (result.semantic_novelty > 0.7) {
+        flags.push({ type: 'good', text: 'High semantic novelty — your angle is relatively unexplored' });
+    }
+    if (result.tag_novelty > 0.7) {
+        flags.push({ type: 'good', text: 'Strong keyword freshness — terms are underused in existing projects' });
+    }
+    if (result.confidence < 0.5) {
+        flags.push({ type: 'info', text: 'Low confidence in score — consider adding more description detail' });
+    }
+    if (matchCount === 0) {
+        flags.push({ type: 'good', text: 'No close matches found — strong differentiation' });
     }
 
-    if (!data) return (
-        <div className={styles.loading}>
-            <div className={styles.loadingSpinner} />
-        </div>
-    );
+    return flags;
+}
+
+// ─── Analysis Page ─────────────────────────────────────────────────────────────
+export default function AnalysisPage() {
+    const router = useRouter();
+    const result = useLitmusStore((s) => s.result);
+    const resultLoading = useLitmusStore((s) => s.resultLoading);
+    const resultError = useLitmusStore((s) => s.resultError);
+    const submission = useLitmusStore((s) => s.submission);
+    const reset = useLitmusStore((s) => s.reset);
+
+    const [copied, setCopied] = useState(false);
+
+    // Guard — if no result and not loading, send back to input
+    useEffect(() => {
+        if (!result && !resultLoading) {
+            router.replace('/chat');
+        }
+    }, [result, resultLoading, router]);
+
+    if (resultLoading) {
+        return (
+            <div className={styles.loading}>
+                <div className={styles.loadingSpinner} />
+                <p className={styles.loadingText}>Analysing your idea…</p>
+            </div>
+        );
+    }
+
+    if (resultError) {
+        return (
+            <div className={styles.loading}>
+                <p style={{ color: '#ff6b6b', marginBottom: '1rem' }}>⚠ {resultError}</p>
+                <button className={styles.retryBtn} onClick={() => router.push('/chat')}>
+                    Try again ↗
+                </button>
+            </div>
+        );
+    }
+
+    if (!result) return null;
+
+    // ── Derived display values ──────────────────────────────────────────────────
+    const { grade, label: gradeLabel, color: gradeColor } = scoreToGrade(result.novelty_score);
+
+    const scores = [
+        { label: 'Novelty score', value: result.novelty_score, color: gradeColor },
+        { label: 'Semantic novelty', value: result.semantic_novelty * 100, color: '#a78bfa' },
+        { label: 'Keyword freshness', value: result.tag_novelty * 100, color: '#67e8f9' },
+        { label: 'Confidence', value: result.confidence * 100, color: '#fb923c' },
+    ];
+
+    const flags = buildFlags(result);
 
     return (
         <div className={styles.root}>
             <div className={styles.glow} aria-hidden />
 
-            {/* ── Top bar ── */}
+            {/* ── Nav ── */}
             <nav className={styles.nav}>
                 <Link href="/" className={styles.navLogo}>litmus</Link>
                 <div className={styles.navCenter}>
-                    <span className={styles.navIdea}>"{idea.slice(0, 60)}{idea.length > 60 ? '...' : ''}"</span>
+                    <span className={styles.navIdea}>
+                        "{(submission?.title || '').slice(0, 60)}{(submission?.title || '').length > 60 ? '…' : ''}"
+                    </span>
                 </div>
-                <Link href="/chat" className={styles.navRetry}>Try another idea ↗</Link>
+                <button
+                    className={styles.navRetry}
+                    onClick={() => { reset(); router.push('/chat'); }}
+                >
+                    Try another idea ↗
+                </button>
             </nav>
 
             <main className={styles.main}>
@@ -197,21 +184,22 @@ export default function AnalysisPage() {
                     <div className={styles.gradeLeft}>
                         <motion.div
                             className={styles.gradeCircle}
+                            style={{ color: gradeColor, borderColor: `${gradeColor}40` }}
                             initial={{ scale: 0.4, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.2 }}
                         >
-                            {data.grade}
+                            {grade}
                         </motion.div>
                         <div>
                             <p className={styles.gradeLabel}>Originality grade</p>
-                            <h1 className={styles.gradeTitle}>Moderate originality detected</h1>
-                            <p className={styles.gradeSummary}>{data.summary}</p>
+                            <h1 className={styles.gradeTitle}>{gradeLabel}</h1>
+                            <p className={styles.gradeSummary}>{result.explanation}</p>
                         </div>
                     </div>
 
                     <div className={styles.gradeScores}>
-                        {data.scores.map((s, i) => (
+                        {scores.map((s, i) => (
                             <ScoreBar key={s.label} {...s} delay={i * 0.07} />
                         ))}
                     </div>
@@ -220,10 +208,10 @@ export default function AnalysisPage() {
                 {/* ── Grid ── */}
                 <div className={styles.grid}>
 
-                    {/* Flags */}
-                    <SectionCard title="Scan findings" tag="4 items" delay={0.05}>
+                    {/* Scan findings */}
+                    <SectionCard title="Scan findings" tag={`${flags.length} items`} delay={0.05}>
                         <div className={styles.flags}>
-                            {data.flags.map((f, i) => (
+                            {flags.map((f, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, x: -12 }}
@@ -237,70 +225,93 @@ export default function AnalysisPage() {
                     </SectionCard>
 
                     {/* Similar projects */}
-                    <SectionCard title="Similar projects found" tag="archive" delay={0.1}>
-                        <div className={styles.similar}>
-                            {data.similar.map((p, i) => (
-                                <div key={i} className={styles.similarRow}>
-                                    <div>
-                                        <p className={styles.similarTitle}>{p.title}</p>
-                                        <p className={styles.similarYear}>{p.year}</p>
-                                    </div>
-                                    <span
-                                        className={styles.similarMatch}
-                                        style={{
-                                            color: parseInt(p.match) > 60 ? '#fb923c' : '#c8f542',
-                                            background: parseInt(p.match) > 60 ? 'rgba(251,146,60,0.08)' : 'rgba(200,245,66,0.06)',
-                                        }}
-                                    >
-                                        {p.match}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </SectionCard>
-
-                    {/* Introduction */}
-                    <SectionCard title="Introduction draft" tag="generated" delay={0.15}>
-                        <p className={styles.prose}>{data.introduction}</p>
-                    </SectionCard>
-
-                    {/* Methodology */}
-                    <SectionCard title="Methodology" tag="generated" delay={0.18}>
-                        <p className={styles.prose}>{data.methodology}</p>
-                    </SectionCard>
+                    {result.closest_matches?.length > 0 && (
+                        <SectionCard
+                            title="Similar projects found"
+                            tag={`${result.closest_matches.length} matches`}
+                            delay={0.1}
+                        >
+                            <div className={styles.similar}>
+                                {result.closest_matches.map((p, i) => {
+                                    const pct = Math.round(p.similarity * 100);
+                                    return (
+                                        <div key={p.id || i} className={styles.similarRow}>
+                                            <div>
+                                                <p className={styles.similarTitle}>{p.title}</p>
+                                                {p.department && (
+                                                    <p className={styles.similarYear}>{p.department}</p>
+                                                )}
+                                                {p.tags?.length > 0 && (
+                                                    <p className={styles.similarTags}>{p.tags.join(' · ')}</p>
+                                                )}
+                                            </div>
+                                            <span
+                                                className={styles.similarMatch}
+                                                style={{
+                                                    color: pct > 60 ? '#fb923c' : '#c8f542',
+                                                    background: pct > 60 ? 'rgba(251,146,60,0.08)' : 'rgba(200,245,66,0.06)',
+                                                }}
+                                            >
+                                                {pct}%
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </SectionCard>
+                    )}
 
                     {/* Keywords */}
-                    <SectionCard title="Suggested keywords" tag={`${data.keywords.length} terms`} delay={0.2}>
-                        <div className={styles.keywords}>
-                            {data.keywords.map((kw, i) => (
-                                <motion.span
-                                    key={kw}
-                                    className={styles.keyword}
-                                    initial={{ opacity: 0, scale: 0.85 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.35 + i * 0.04 }}
-                                >
-                                    {kw}
-                                </motion.span>
-                            ))}
-                        </div>
-                    </SectionCard>
-
-                    {/* Starter Code */}
-                    <SectionCard title="Starter code" tag="JavaScript" delay={0.22}>
-                        <div className={styles.codeWrap}>
-                            <div className={styles.codeBar}>
-                                <span className={styles.codeFile}>pipeline.js</span>
-                                <button className={styles.copyBtn} onClick={copyCode}>
-                                    {copied ? '✓ Copied' : 'Copy'}
-                                </button>
+                    {result.generated_keywords?.length > 0 && (
+                        <SectionCard
+                            title="Generated keywords"
+                            tag={`${result.generated_keywords.length} terms`}
+                            delay={0.15}
+                        >
+                            <div className={styles.keywords}>
+                                {result.generated_keywords.map((kw, i) => (
+                                    <motion.span
+                                        key={kw}
+                                        className={styles.keyword}
+                                        initial={{ opacity: 0, scale: 0.85 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.35 + i * 0.04 }}
+                                    >
+                                        {kw}
+                                    </motion.span>
+                                ))}
                             </div>
-                            <pre className={styles.code}><code>{data.starterCode}</code></pre>
-                        </div>
-                    </SectionCard>
+                        </SectionCard>
+                    )}
+
+                    {/* Matched tags (overlap warnings) */}
+                    {result.matched_tags?.length > 0 && (
+                        <SectionCard
+                            title="Overlapping tags"
+                            tag="risk flags"
+                            delay={0.18}
+                        >
+                            <div className={styles.keywords}>
+                                {result.matched_tags.map((tag, i) => (
+                                    <motion.span
+                                        key={tag}
+                                        className={styles.keywordWarn}
+                                        initial={{ opacity: 0, scale: 0.85 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: 0.35 + i * 0.04 }}
+                                    >
+                                        {tag}
+                                    </motion.span>
+                                ))}
+                            </div>
+                        </SectionCard>
+                    )}
 
                 </div>
             </main>
+
+            {/* ── Chat Panel (slide-in) ── */}
+            <ChatPanel />
         </div>
     );
 }
