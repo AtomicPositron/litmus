@@ -5,6 +5,7 @@
     overflow: clip;
     font-family: 'DM Sans', sans-serif;
     color: #f0ede6;
+    margin-top: 2rem;
 }
 
 /* ── Grade stream ticker ───────────────────────────────────── */
@@ -14,7 +15,7 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding: 0.65rem 0;
     background: rgba(255, 255, 255, 0.015);
-    position: relative;
+    position: relative;;
 }
 
 .gradeTicker::before,
@@ -60,14 +61,14 @@
     align-items: center;
     gap: 8px;
     padding: 0 28px;
-    font-size: 0.72rem;
+    font-size: 1.5rem;
     letter-spacing: 0.04em;
 }
 
 .gradeTickerGrade {
     font-family: 'Syne', sans-serif;
     font-weight: 800;
-    font-size: 0.78rem;
+    font-size: 1rem;
     letter-spacing: -0.02em;
     min-width: 26px;
 }

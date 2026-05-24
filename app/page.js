@@ -8,6 +8,7 @@ import ElectricBorder from '@/components/ElectricBroder';
 import Nav from '@/components/Navbar';
 import { usePerformanceTier } from '../app/hooks/useperformancetier';
 import Footer from '@/components/Footer';
+import { h1 } from 'framer-motion/client';
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 
@@ -529,7 +530,7 @@ function ScrollSpotlight({ children, className, tier }) {
     offset: ['start end', 'center center', 'end start'],
   });
 
-  const opacity = useTransform(scrollYProgress, [0, 0.5, 1], [0, 1, 0]);
+  const opacity = useTransform(scrollYProgress, [0, 0.8, 1], [0, 2, 1]);
   const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 0.95]);
   const y = useTransform(scrollYProgress, [0, 0.5, 1], [40, 0, -40]);
 
@@ -777,7 +778,8 @@ export default function LandingPage() {
           </CursorSpotlight>
         </ElectricBorder>
       </FadeIn>
+      <Footer />
     </div>
   );
-  <Footer />
+
 }

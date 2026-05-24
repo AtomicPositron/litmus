@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import styles from './chat.module.css';
 import useLitmusStore from '../hooks/useLitmusStore';
-
+import Footer from '@/components/Footer';
 // ─── Placeholder cycling ───────────────────────────────────────────────────────
 const PLACEHOLDERS = [
     'A smart attendance system using facial recognition...',

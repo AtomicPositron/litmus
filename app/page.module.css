@@ -35,7 +35,8 @@
   z-index: 10;
   max-height: fit-content;
   overflow: clip;
-  padding: 3rem;
+  padding: 9rem 3rem;
+
 }
 
 
@@ -51,12 +52,11 @@
 .heroContent {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: left;
   flex-direction: column;
-  width: 100%;
+  width: 50%;
   margin: auto;
   display: flex;
-  align-items: center;
 }
 
 .heroTitle {
@@ -67,8 +67,7 @@
   letter-spacing: -0.04em;
   color: var(--litmus-text);
   margin: 0 0 1.25rem;
-  width: 120%;
-  text-align: center;
+  width: fit-content;
 }
 
 .heroTitleAccent {
@@ -82,7 +81,6 @@
   line-height: 1.75;
   color: var(--litmus-muted);
   max-width: 520px;
-  margin: 0 auto 2.5rem;
 }
 
 .heroCtas {
@@ -90,7 +88,7 @@
   gap: 0.75rem;
   margin-bottom: 4rem;
   flex-wrap: wrap;
-  justify-content: center;
+  margin-top: 2rem;
 }
 
 .ctaPrimary {
@@ -130,10 +128,10 @@
 /* ── Hero Card ─────────────────────────────────────────────── */
 .heroCardWrap {
   height: 100%;
-  width: 100%;
+  width: 30%;
   right: 0;
   display: flex;
-  justify-content: center;
+  justify-content: left;
   align-items: center;
 }
 
@@ -570,8 +568,9 @@
 .features {
   min-width: 100%;
   background-color: var(--litmus-accent-dark);
-  margin: 5rem 0;
-  min-height: 150svh;
+  height: fit-content;
+  padding: 3rem ;
+  margin: 5rem 0rem;
   display: flex;
   flex-direction: column;
   justify-content: center;
