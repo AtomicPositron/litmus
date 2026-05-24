@@ -757,7 +757,7 @@ export default function LandingPage() {
       {/* CTA Banner */}
       <FadeIn tier={tier}>
         <ElectricBorder
-          color="#98c235"
+          color="#32cbff"
           speed={0.7}
           chaos={0.11}
           thickness={2}

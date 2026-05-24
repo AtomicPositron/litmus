@@ -1,4 +1,4 @@
-/* ── Nav shell ─────────────────────────────────────────────── */
+/* ── Nav ──────────────────────────────────────────────────────── */
 .nav {
     position: sticky;
     top: 0px;
@@ -9,9 +9,6 @@
     transition: all .3s ease;
 }
 
-
-
-/* ── Pill ──────────────────────────────────────────────────── */
 .pill {
     will-change: background, backdrop-filter, box-shadow;
     transform: translateZ(0);
@@ -28,15 +25,12 @@
     width: 90%;
     background: rgb(10, 10, 10);
     box-shadow:
-        0 0 0 1px rgba(200, 245, 66, 0.05),
+        0 0 0 1px rgba(50, 203, 255, 0.05),
         0 8px 40px rgba(0, 0, 0, 0.55);
-        border-radius: 20px;
-        margin-top: 10px;
+    border-radius: 20px;
+    margin-top: 10px;
 }
 
-
-
-/* ── Logo ──────────────────────────────────────────────────── */
 .logo {
     font-family: 'Syne', sans-serif;
     font-size: 1.2rem;
@@ -53,17 +47,16 @@
 }
 
 .logo:hover {
-    color: #c8f542;
+    color: #32cbff;
 }
 
 .logoMark {
-    color: #c8f542;
+    color: #32cbff;
     font-size: 0.85rem;
     line-height: 1;
     opacity: 0.8;
 }
 
-/* ── Desktop links ─────────────────────────────────────────── */
 .links {
     display: flex;
     gap: 2px;
@@ -110,7 +103,6 @@
     opacity: 0.9;
 }
 
-/* ── Dropdown panel ────────────────────────────────────────── */
 .panel {
     position: absolute;
     top: calc(100% + 10px);
@@ -123,10 +115,8 @@
     padding: 14px 10px;
     box-shadow:
         0 24px 48px rgba(0, 0, 0, 0.75),
-        0 0 0 1px rgba(200, 245, 66, 0.04);
+        0 0 0 1px rgba(50, 203, 255, 0.04);
     z-index: 200;
-
-    /* Thin accent line at top */
     overflow: hidden;
 }
 
@@ -137,7 +127,7 @@
     left: 10%;
     right: 10%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(200, 245, 66, 0.35), transparent);
+    background: linear-gradient(90deg, transparent, rgba(50, 203, 255, 0.35), transparent);
 }
 
 .panelLabel {
@@ -145,7 +135,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #c8f542;
+    color: #32cbff;
     margin: 0 6px 10px;
 }
 
@@ -165,8 +155,8 @@
 }
 
 .panelItem:hover .panelDot {
-    background: #c8f542;
-    box-shadow: 0 0 6px rgba(200, 245, 66, 0.5);
+    background: #32cbff;
+    box-shadow: 0 0 6px rgba(50, 203, 255, 0.5);
 }
 
 .panelDot {
@@ -198,7 +188,6 @@
     line-height: 1.45;
 }
 
-/* ── Right cluster ─────────────────────────────────────────── */
 .right {
     display: flex;
     align-items: center;
@@ -206,7 +195,6 @@
     flex-shrink: 0;
 }
 
-/* ── Status badge ──────────────────────────────────────────── */
 .status {
     max-width: 200px;
     opacity: 1;
@@ -224,18 +212,18 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #c8f542;
+    background: #32cbff;
     flex-shrink: 0;
     animation: statusPulse 2.4s ease-in-out infinite;
 }
 
 @keyframes statusPulse {
     0%, 100% {
-        box-shadow: 0 0 0 0 rgba(200, 245, 66, 0.5);
+        box-shadow: 0 0 0 0 rgba(50, 203, 255, 0.5);
     }
 
     50% {
-        box-shadow: 0 0 0 4px rgba(200, 245, 66, 0);
+        box-shadow: 0 0 0 4px rgba(50, 203, 255, 0);
     }
 }
 
@@ -245,13 +233,12 @@
     letter-spacing: 0.04em;
 }
 
-/* ── CTA button ────────────────────────────────────────────── */
 .cta {
     font-size: 0.8rem;
     font-weight: 600;
     letter-spacing: 0.01em;
     color: #080808;
-    background: #c8f542;
+    background: #32cbff;
     padding: 9px 18px;
     border-radius: 999px;
     text-decoration: none;
@@ -262,11 +249,11 @@
 
 @keyframes ctaBorn {
     0% {
-        box-shadow: 0 0 0 0 rgba(200, 245, 66, 0.7);
+        box-shadow: 0 0 0 0 rgba(50, 203, 255, 0.7);
     }
 
     70% {
-        box-shadow: 0 0 0 12px rgba(200, 245, 66, 0);
+        box-shadow: 0 0 0 12px rgba(50, 203, 255, 0);
     }
 
     100% {
@@ -277,10 +264,9 @@
 .cta:hover {
     opacity: 0.88;
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(200, 245, 66, 0.28);
+    box-shadow: 0 4px 20px rgba(50, 203, 255, 0.28);
 }
 
-/* ── Hamburger ─────────────────────────────────────────────── */
 .hamburger {
     display: none;
     flex-direction: column;
@@ -300,7 +286,6 @@
     transform-origin: center;
 }
 
-/* ── Mobile menu wrapper ───────────────────────────────────── */
 .mobileMenuWrap {
     display: none;
     position: absolute;
@@ -310,13 +295,12 @@
     z-index: 200;
 }
 
-/* ── Mobile menu ───────────────────────────────────────────── */
 .mobileMenu {
     background: #0e0e0e;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 18px;
     padding: 20px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(200, 245, 66, 0.04);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(50, 203, 255, 0.04);
     margin-top: 8px;
 }
 
@@ -333,7 +317,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #c8f542;
+    color: #32cbff;
     margin: 0 0 8px 6px;
 }
 
@@ -369,7 +353,7 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: #080808;
-    background: #c8f542;
+    background: #32cbff;
     padding: 10px 28px;
     border-radius: 999px;
     text-decoration: none;
@@ -381,7 +365,6 @@
     opacity: 0.88;
 }
 
-/* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 900px) {
     .nav {
         position: sticky;
@@ -430,3 +413,4 @@
         font-size: 1.1rem;
     }
 }
+

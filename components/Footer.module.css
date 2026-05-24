@@ -1,4 +1,4 @@
-/* ── Footer shell ──────────────────────────────────────────── */
+/* ── Footer ───────────────────────────────────────────────────── */
 .footer {
     background: #080808;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -8,14 +8,13 @@
     margin-top: 2rem;
 }
 
-/* ── Grade stream ticker ───────────────────────────────────── */
 .gradeTicker {
     width: 100%;
     overflow: hidden;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     padding: 0.65rem 0;
     background: rgba(255, 255, 255, 0.015);
-    position: relative;;
+    position: relative;
 }
 
 .gradeTicker::before,
@@ -89,19 +88,17 @@
 }
 
 .gradeTickerDot {
-    color: rgba(200, 245, 66, 0.25);
+    color: rgba(50, 203, 255, 0.25);
     font-size: 0.5rem;
     margin-left: 6px;
 }
 
-/* ── Container ─────────────────────────────────────────────── */
 .footerContainer {
     max-width: 1160px;
     margin: 0 auto;
     padding: 4rem 2.5rem 2rem;
 }
 
-/* ── Top grid ──────────────────────────────────────────────── */
 .footerTop {
     display: grid;
     grid-template-columns: 1.6fr 0.8fr 1.4fr;
@@ -111,7 +108,6 @@
     align-items: start;
 }
 
-/* ── Brand column ──────────────────────────────────────────── */
 .footerBrand {
     display: flex;
     flex-direction: column;
@@ -129,7 +125,6 @@
     cursor: default;
 }
 
-/* Glitch effect */
 .glitch {
     animation: glitch 0.32s steps(2) forwards;
 }
@@ -143,7 +138,7 @@
 }
 
 .glitch::before {
-    color: #c8f542;
+    color: #32cbff;
     clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
     transform: translateX(-2px);
     animation: glitchTop 0.32s steps(2) forwards;
@@ -222,7 +217,7 @@
 
 .cursor {
     display: inline-block;
-    color: #c8f542;
+    color: #32cbff;
     margin-left: 1px;
     animation: blink 0.9s step-end infinite;
 }
@@ -237,7 +232,6 @@
     }
 }
 
-/* ── Stats row ─────────────────────────────────────────────── */
 .statsRow {
     display: flex;
     gap: 1.5rem;
@@ -254,7 +248,7 @@
     font-family: 'Syne', sans-serif;
     font-size: 1.25rem;
     font-weight: 800;
-    color: #c8f542;
+    color: #32cbff;
     letter-spacing: -0.04em;
     line-height: 1;
 }
@@ -267,7 +261,6 @@
     font-weight: 500;
 }
 
-/* ── Status badge ──────────────────────────────────────────── */
 .statusBadge {
     display: inline-flex;
     align-items: center;
@@ -285,22 +278,21 @@
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: #c8f542;
+    background: #32cbff;
     flex-shrink: 0;
     animation: statusPulse 2.4s ease-in-out infinite;
 }
 
 @keyframes statusPulse {
     0%, 100% {
-        box-shadow: 0 0 0 0 rgba(200, 245, 66, 0.45);
+        box-shadow: 0 0 0 0 rgba(50, 203, 255, 0.45);
     }
 
     50% {
-        box-shadow: 0 0 0 4px rgba(200, 245, 66, 0);
+        box-shadow: 0 0 0 4px rgba(50, 203, 255, 0);
     }
 }
 
-/* ── Radar ─────────────────────────────────────────────────── */
 .radarWrap {
     position: relative;
     display: flex;
@@ -309,8 +301,6 @@
     gap: 0.75rem;
 }
 
-
-/* ── Nav columns ───────────────────────────────────────────── */
 .footerNav {
     display: flex;
     gap: 2.5rem;
@@ -329,7 +319,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: #c8f542;
+    color: #32cbff;
     margin: 0 0 4px;
 }
 
@@ -355,7 +345,6 @@
     color: #f0ede6;
 }
 
-/* ── CTA strip ─────────────────────────────────────────────── */
 .ctaStrip {
     display: flex;
     align-items: center;
@@ -392,7 +381,7 @@
     font-size: 0.85rem;
     font-weight: 600;
     color: #080808;
-    background: #c8f542;
+    background: #32cbff;
     padding: 10px 22px;
     border-radius: 999px;
     text-decoration: none;
@@ -404,7 +393,7 @@
 .ctaStripBtn:hover {
     opacity: 0.88;
     transform: translateY(-1px);
-    box-shadow: 0 4px 20px rgba(200, 245, 66, 0.28);
+    box-shadow: 0 4px 20px rgba(50, 203, 255, 0.28);
 }
 
 .ctaArrow {
@@ -417,7 +406,6 @@
     transform: translate(2px, -2px);
 }
 
-/* ── Bottom bar ────────────────────────────────────────────── */
 .footerBottom {
     display: flex;
     align-items: center;
@@ -455,12 +443,11 @@
 }
 
 .footerSocialLink:hover {
-    color: #c8f542;
-    border-color: rgba(200, 245, 66, 0.25);
-    background: rgba(200, 245, 66, 0.05);
+    color: #32cbff;
+    border-color: rgba(50, 203, 255, 0.25);
+    background: rgba(50, 203, 255, 0.05);
 }
 
-/* ── Responsive ────────────────────────────────────────────── */
 @media (max-width: 960px) {
     .footerTop {
         grid-template-columns: 1fr 1fr;

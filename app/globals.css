@@ -1,5 +1,3 @@
-
-
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -33,15 +31,13 @@ body {
   --litmus-muted: #888580;
   --litmus-muted2: #555250;
 
-  /* Brand colours */
-  --litmus-accent: #c8f542;
-  /* electric lime */
+  /* Brand colours — accent swapped */
+  --litmus-accent: #32cbff;
+  /* electric blue  ← was #c8f542 */
   --litmus-accent2: #a78bfa;
-  /* soft violet */
   --litmus-cyan: #67e8f9;
   --litmus-orange: #fb923c;
   --litmus-red: #ff6b6b;
-
   /* Radius */
   --litmus-radius: 14px;
   --litmus-radius-sm: 8px;

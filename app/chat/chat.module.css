@@ -13,7 +13,6 @@
     overflow: hidden;
 }
 
-/* Dot grid background */
 .gridBg {
     position: fixed;
     inset: 0;
@@ -33,7 +32,7 @@
     width: 600px;
     height: 500px;
     background: radial-gradient(ellipse,
-            rgba(200, 245, 66, 0.06) 0%,
+            rgba(50, 203, 255, 0.06) 0%,
             transparent 65%);
     pointer-events: none;
     z-index: 0;
@@ -49,7 +48,6 @@
     gap: 1.75rem;
 }
 
-/* ── Header ─────────────────────────────────────────────────── */
 .header {
     text-align: center;
 }
@@ -79,7 +77,6 @@
     margin: 0;
 }
 
-/* ── Input Box ───────────────────────────────────────────────── */
 .inputWrap {
     display: flex;
     flex-direction: column;
@@ -92,7 +89,7 @@
     border-radius: 16px;
     overflow: hidden;
     box-shadow:
-        0 0 0 1px rgba(200, 245, 66, 0.04),
+        0 0 0 1px rgba(50, 203, 255, 0.04),
         0 20px 60px rgba(0, 0, 0, 0.5),
         inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
@@ -177,7 +174,6 @@
     cursor: not-allowed;
 }
 
-/* ── Scan Log ────────────────────────────────────────────────── */
 .scanLog {
     overflow: hidden;
     background: var(--litmus-surface);
@@ -205,7 +201,6 @@
     font-weight: 700;
 }
 
-/* ── Thinking Dots ───────────────────────────────────────────── */
 .thinkingDots {
     display: inline-flex;
     gap: 3px;
@@ -221,7 +216,6 @@
     display: inline-block;
 }
 
-/* ── Example Chips ───────────────────────────────────────────── */
 .chips {
     display: flex;
     flex-wrap: wrap;
@@ -255,5 +249,24 @@
 @media (max-width: 480px) {
     .chips {
         display: none;
+    }
+}
+
+
+
+/* ── Spinner ─────────────────────────────────────────────────── */
+.spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(8, 8, 8, 0.25);
+    border-top-color: var(--litmus-bg);
+    border-radius: 50%;
+    animation: spin 0.65s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
 }
