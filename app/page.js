@@ -1,14 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
-import { motion, useInView, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion';
+import { motion, useInView, useScroll, useTransform, useSpring } from 'framer-motion';
 import Link from 'next/link';
 import styles from './page.module.css';
 import ElectricBorder from '@/components/ElectricBroder';
 import Nav from '@/components/Navbar';
 import { usePerformanceTier } from '../app/hooks/useperformancetier';
 import Footer from '@/components/Footer';
-import { h1 } from 'framer-motion/client';
 
 // ─── Static Data ───────────────────────────────────────────────────────────────
 
@@ -32,39 +31,6 @@ const STEPS = [
     num: '04',
     title: 'Generate assets',
     body: 'Get starter code, an intro draft, methodology, and fresh keywords instantly.',
-  },
-];
-
-const FEATURES = [
-  {
-    icon: '◎',
-    title: 'Originality scanner',
-    body: 'Checks your idea against a growing database of past student projects using keyword and binary matching.',
-  },
-  {
-    icon: 'Аᵦ',
-    title: 'Letter grade scoring',
-    body: 'Translates your similarity score into a clear A–F grade so you know exactly where you stand.',
-  },
-  {
-    icon: '</>',
-    title: 'Starter code generation',
-    body: 'Auto-generates boilerplate code matched to your project domain and methodology.',
-  },
-  {
-    icon: '≡',
-    title: 'Intro & methodology draft',
-    body: 'Generates a structured introduction and methodology section you can edit and build on.',
-  },
-  {
-    icon: '#',
-    title: 'Fresh keyword suggestions',
-    body: 'Recommends unique keywords to help differentiate your work and improve academic searchability.',
-  },
-  {
-    icon: '⬡',
-    title: 'AI chat support',
-    body: 'Ask follow-up questions about your score, refine your idea, or explore alternative approaches via chat.',
   },
 ];
 
@@ -135,55 +101,6 @@ function Counter({ target, suffix = '', duration = 2000 }) {
 }
 
 // ─── Magnetic Tilt Card — throttled on high tier, static on low ───────────────
-
-function MagneticCard({ children, className, tier }) {
-  const ref = useRef(null);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
-  const frameRef = useRef(null);
-
-  const handleMouseMove = useCallback((e) => {
-    if (tier === 'low') return;
-    // Throttle to rAF — prevents setState storm on mousemove
-    if (frameRef.current) return;
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = null;
-      if (!ref.current) return;
-      const rect = ref.current.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width - 0.5;
-      const y = (e.clientY - rect.top) / rect.height - 0.5;
-      setTilt({ x: y * -8, y: x * 8 });
-    });
-  }, [tier]);
-
-  const handleMouseLeave = useCallback(() => {
-    if (frameRef.current) {
-      cancelAnimationFrame(frameRef.current);
-      frameRef.current = null;
-    }
-    setTilt({ x: 0, y: 0 });
-    setIsHovered(false);
-  }, []);
-
-  if (tier === 'low') {
-    return <div ref={ref} className={className}>{children}</div>;
-  }
-
-  return (
-    <motion.div
-      ref={ref}
-      className={className}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      animate={{ rotateX: tilt.x, rotateY: tilt.y, scale: isHovered ? 1.025 : 1 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      style={{ transformStyle: 'preserve-3d', willChange: 'transform' }}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 // ─── Cursor Spotlight ──────────────────────────────────────────────────────────
 
@@ -520,32 +437,6 @@ function FadeIn({ children, delay = 0, className, tier }) {
   );
 }
 
-// ─── ScrollSpotlight — y transform removed on low tier ────────────────────────
-
-function ScrollSpotlight({ children, className, tier }) {
-  const ref = useRef(null);
-
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start end', 'center center', 'end start'],
-  });
-
-  const opacity = useTransform(scrollYProgress, [0, 0.8, 1], [0, 2, 1]);
-  const scale = useTransform(scrollYProgress, [0, 0.5, 1], [0.95, 1, 0.95]);
-  const y = useTransform(scrollYProgress, [0, 0.5, 1], [40, 0, -40]);
-
-  // Low tier: only opacity, no scale/y transform
-  const motionStyle = tier === 'low'
-    ? { opacity }
-    : { opacity, scale, y };
-
-  return (
-    <motion.div ref={ref} style={motionStyle} className={className}>
-      {children}
-    </motion.div>
-  );
-}
-
 // ─── Stats Strip ──────────────────────────────────────────────────────────────
 
 function StatsStrip() {
@@ -734,25 +625,85 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
-      <ScrollSpotlight tier={tier}>
-        <section className={`${styles.section} ${styles.features}`} id="features">
-          <p className={styles.sectionLabel}>FEATURES</p>
-          <h2 className={styles.sectionTitle}>Everything you need to start right</h2>
-
-          <div className={styles.featuresGrid}>
-            {FEATURES.map((f, i) => (
-              <FadeIn key={f.title} delay={i * 0.06} tier={tier}>
-                <MagneticCard className={styles.featureCard} tier={tier}>
-                  <span className={styles.featureIcon}>{f.icon}</span>
-                  <h3 className={styles.featureTitle}>{f.title}</h3>
-                  <p className={styles.featureBody}>{f.body}</p>
-                </MagneticCard>
-              </FadeIn>
-            ))}
+      {/* Features — Premium B&W Bento Grid */}
+      <section className={styles.bentoSection} id="features">
+        <div className={styles.bentoContainer}>
+          <div className={styles.bentoHeader}>
+            <p className={styles.bentoLabel}>FEATURES</p>
+            <h2 className={styles.bentoTitle}>Everything you need to start right</h2>
           </div>
-        </section>
-      </ScrollSpotlight>
+
+          <div className={styles.bentoGrid}>
+            {/* ── Col 1: Tall card ─────────────────────────────────── */}
+            <div className={styles.bentoCardTall}>
+              <div className={styles.bentoCardInner}>
+                <span className={styles.bentoIcon}>◎</span>
+                <p className={styles.bentoCardLabel}>Originality scanner</p>
+                <p className={styles.bentoCardText}>
+                  Checks your idea against a growing database of past student projects using keyword and binary matching.
+                </p>
+              </div>
+            </div>
+
+            {/* ── Col 2: Stacked cards ──────────────────────────────────── */}
+            <div className={styles.bentoColStack}>
+              <div className={styles.bentoCardMedium}>
+                <div className={styles.bentoCardInner}>
+                  <span className={styles.bentoIcon}>Аᵦ</span>
+                  <p className={styles.bentoCardLabel}>Letter grade scoring</p>
+                  <p className={styles.bentoCardText}>
+                    Translates your similarity score into a clear A–F grade so you know exactly where you stand.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.bentoCardSmall}>
+                <div className={styles.bentoCardInner}>
+                  <span className={styles.bentoIcon}>{'</>'}</span>
+                  <p className={styles.bentoCardLabel}>Starter code generation</p>
+                  <p className={styles.bentoCardText}>
+                    Auto-generates boilerplate code matched to your project domain and methodology.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Col 3: Stacked cards ──────────────────────────────────── */}
+            <div className={styles.bentoColStack}>
+              <div className={styles.bentoCardCompact}>
+                <div className={styles.bentoCardInner}>
+                  <span className={styles.bentoIcon}>≡</span>
+                  <p className={styles.bentoCardLabel}>Intro &amp; methodology draft</p>
+                  <p className={styles.bentoCardText}>
+                    Generates a structured introduction and methodology section you can edit and build on.
+                  </p>
+                </div>
+              </div>
+
+              <div className={styles.bentoCardLarge}>
+                <div className={styles.bentoCardInner}>
+                  <span className={styles.bentoIcon}>#</span>
+                  <p className={styles.bentoCardLabel}>Fresh keyword suggestions</p>
+                  <p className={styles.bentoCardText}>
+                    Recommends unique keywords to help differentiate your work and improve academic searchability.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Full-width bottom card ──────────────────────────────── */}
+            <div className={styles.bentoCardWide}>
+              <div className={styles.bentoCardInner}>
+                <span className={styles.bentoIcon}>⬡</span>
+                <p className={styles.bentoCardLabel}>AI chat support</p>
+                <p className={styles.bentoCardText}>
+                  Ask follow-up questions about your score, refine your idea, or explore alternative approaches via chat.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* CTA Banner */}
       <FadeIn tier={tier}>
