@@ -262,7 +262,8 @@ function ErrorScreen({ message, onRetry }) {
 
 export default function AnalysisPage() {
     const router = useRouter();
-    const result = useLitmusStore((s) => s.result);
+  const result = useLitmusStore((s) => s.result);
+  console.log(result)
     const resultLoading = useLitmusStore((s) => s.resultLoading);
     const resultError = useLitmusStore((s) => s.resultError);
     const submission = useLitmusStore((s) => s.submission);
@@ -499,13 +500,13 @@ export default function AnalysisPage() {
                             <div className={styles.tagCloud} aria-label="Overlapping tags">
                                 {result.matched_tags.map((tag, i) => (
                                     <motion.span
-                                        key={tag}
+                                        key={tag.matched_tag}
                                         className={`${styles.tag} ${styles.tagWarn}`}
                                         initial={{ opacity: 0, scale: 0.88 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{ delay: 0.3 + i * 0.03, ease: EASE_OUT_EXPO }}
                                     >
-                                        {tag}
+                                        {tag.matched_tag}
                                     </motion.span>
                                 ))}
                             </div>
