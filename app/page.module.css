@@ -557,92 +557,109 @@
   opacity: 0.4;
 }
 
-/* ── Features Grid ─────────────────────────────────────────── */
-.features {
-  min-width: 100%;
-  background-color: var(--litmus-accent-dark);
-  height: fit-content;
-  padding: 3rem;
-  margin: 5rem 0rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.featuresGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-  gap: 10px;
-  overflow: hidden;
-  margin-top: 2.5rem;
-}
-
-.featureCard {
-  background: var(--litmus-surface);
-  padding: 2rem 1.75rem;
-  transition: background 0.25s;
+/* ── Bento Features Section ──────────────────────────────────── */
+.bentoSection {
   position: relative;
-  height: 100%;
-  cursor: default;
-  perspective: 600px;
-}
-
-.featureCard:hover {
-  background: var(--litmus-surface2);
-}
-
-.featureCard:hover .featureIcon {
-  color: var(--litmus-accent);
-  border-color: rgba(50, 203, 255, 0.3);
-  background: rgba(50, 203, 255, 0.08);
-}
-
-.featureCard::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--litmus-accent), transparent);
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-
-.featureCard:hover::before {
-  opacity: 0.6;
-}
-
-.featureIcon {
+  width: 100%;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--litmus-muted2);
-  margin-bottom: 1rem;
-  font-family: 'Syne', monospace;
-  transition: color 0.25s, background 0.25s, border-color 0.25s;
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--litmus-border-hi);
-  border-radius: 8px;
+  padding: 6rem 2rem;
+  overflow: hidden;
 }
 
-.featureTitle {
+.bentoContainer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1080px;
+  background: transparent;
+  border-radius: 16px;
+  padding: 40px;
+}
+
+.bentoHeader {
+  margin-bottom: 32px;
+}
+
+.bentoLabel {
+  font-family: 'Syne', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--litmus-accent);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin: 0 0 8px;
+}
+
+.bentoTitle {
   font-family: 'Syne', sans-serif;
-  font-size: 0.95rem;
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--litmus-text);
+  margin: 0;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.bentoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.bentoCardTall {
+  grid-row: span 2;
+}
+
+.bentoColStack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.bentoCardWide {
+  grid-column: 1 / -1;
+}
+
+.bentoCardInner {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(50, 203, 255, 0.25);
+  border-radius: 12px;
+  padding: 32px 28px;
+  height: 100%;
+  transition: border-color 0.3s, background 0.3s;
+}
+
+.bentoCardInner:hover {
+  border-color: rgba(50, 203, 255, 0.5);
+  background: rgba(255,255,255,0.06);
+}
+
+.bentoIcon {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 12px;
+  color: var(--litmus-muted);
+  font-family: 'Syne', monospace;
+  line-height: 1;
+}
+
+.bentoCardLabel {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.3rem;
   font-weight: 700;
   color: var(--litmus-text);
-  margin: 0 0 0.5rem;
+  margin: 0 0 8px;
   letter-spacing: -0.02em;
 }
 
-.featureBody {
-  font-size: 0.82rem;
+.bentoCardText {
+  font-size: 1.05rem;
   color: var(--litmus-muted);
-  line-height: 1.75;
+  line-height: 1.65;
   margin: 0;
 }
 
@@ -746,8 +763,18 @@
     border-right: none;
   }
 
-  .featuresGrid {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  .bentoGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bentoCardTall {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .bentoContainer {
+    width: 100%;
+    padding: 24px;
   }
 
   .heroScreens {
@@ -839,9 +866,22 @@
     padding: 4rem 1.25rem;
   }
 
-  .stepsGrid,
-  .featuresGrid {
+  .stepsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .bentoGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .bentoContainer {
+    width: 100%;
+    border-radius: 0;
+    padding: 20px;
+  }
+
+  .bentoSection {
+    padding: 4rem 1.25rem;
   }
 
   .ctaBanner {
@@ -860,11 +900,7 @@
     text-align: center;
   }
 
-  .features {
-    margin: 2rem 0;
-    min-height: unset;
-    padding: 4rem 1.25rem;
-  }
+
 
   .mobileMenu {
     right: 0.5rem;
