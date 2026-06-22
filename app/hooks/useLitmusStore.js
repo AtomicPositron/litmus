@@ -91,7 +91,7 @@ const useLitmusStore = create((set, get) => ({
     });
 
     try {
-      let user_history = getChat()
+      let user_history = JSON.stringify(getChat())
       const res = await fetch(`${API_BASE}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
